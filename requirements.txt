@@ -1,0 +1,13 @@
+pandas
+numpy
+scikit-learn
+psycopg2-binary
+sqlalchemy
+spacy
+sentence-transformers
+fastapi
+uvicorn
+streamlit
+matplotlib
+seaborn
+python-dotenv

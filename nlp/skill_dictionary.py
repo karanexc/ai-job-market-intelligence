@@ -1,0 +1,21 @@
+SKILLS = [
+    "python",
+    "sql",
+    "aws",
+    "pytorch",
+    "tensorflow",
+    "machine learning",
+    "deep learning",
+    "nlp",
+    "data science",
+    "data engineering",
+    "spark",
+    "hadoop",
+    "tableau",
+    "power bi",
+    "statistics",
+    "docker",
+    "kubernetes",
+    "langchain",
+    "llm"
+]
