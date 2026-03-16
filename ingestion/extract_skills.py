@@ -5,6 +5,8 @@ import os
 
 from nlp.skill_extractor import extract_skills
 
+
+# Load environment variables
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST")
@@ -20,22 +22,41 @@ engine = create_engine(DATABASE_URL)
 
 def extract_and_store_skills():
 
-    query = "SELECT job_id, job_title FROM jobs"
+    print("Loading jobs from database...")
+
+    query = """
+    SELECT job_id, job_title, job_description
+    FROM jobs
+    """
 
     jobs_df = pd.read_sql(query, engine)
+
+    print(f"Total jobs loaded: {len(jobs_df)}")
+
+    processed_jobs = 0
+    total_skills = 0
 
     with engine.begin() as conn:
 
         for _, row in jobs_df.iterrows():
 
             job_id = row["job_id"]
-            title = row["job_title"]
+            title = row["job_title"] or ""
+            description = row["job_description"] or ""
 
-            skills = extract_skills(title)
+            # Combine text fields
+            combined_text = f"{title} {description}"
+
+            skills = extract_skills(combined_text)
+
+            if not skills:
+                continue
+
+            processed_jobs += 1
 
             for skill in skills:
 
-                # Insert skill if not exists
+                # Insert skill if it doesn't exist
                 conn.execute(
                     text("""
                     INSERT INTO skills (skill_name)
@@ -45,10 +66,11 @@ def extract_and_store_skills():
                     {"skill": skill}
                 )
 
-                # Get skill id
+                # Retrieve skill_id
                 result = conn.execute(
                     text("""
-                    SELECT skill_id FROM skills
+                    SELECT skill_id
+                    FROM skills
                     WHERE skill_name = :skill
                     """),
                     {"skill": skill}
@@ -56,16 +78,21 @@ def extract_and_store_skills():
 
                 skill_id = result.fetchone()[0]
 
-                # Insert job-skill mapping
+                # Insert job-skill mapping (avoid duplicates)
                 conn.execute(
                     text("""
                     INSERT INTO job_skills (job_id, skill_id)
                     VALUES (:job_id, :skill_id)
+                    ON CONFLICT DO NOTHING
                     """),
                     {"job_id": job_id, "skill_id": skill_id}
                 )
 
-    print("Skills extracted and stored successfully!")
+                total_skills += 1
+
+    print("\nSkill extraction completed!")
+    print(f"Jobs with detected skills: {processed_jobs}")
+    print(f"Total skill mappings created: {total_skills}")
 
 
 if __name__ == "__main__":

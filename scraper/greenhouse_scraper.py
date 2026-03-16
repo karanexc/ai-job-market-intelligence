@@ -3,6 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import os
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
@@ -20,11 +21,9 @@ engine = create_engine(DATABASE_URL)
 companies = [
     "stripe",
     "airbnb",
-    "openai",
     "robinhood",
     "coinbase",
     "databricks",
-    "notion",
     "figma",
     "discord",
     "dropbox"
@@ -37,9 +36,9 @@ def scrape_greenhouse():
 
     for company in companies:
 
-        url = f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs"
+        url = f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true"
 
-        print("Scraping:", url)
+        print(f"\nScraping {company}...")
 
         response = requests.get(url)
 
@@ -50,23 +49,38 @@ def scrape_greenhouse():
         data = response.json()
 
         if "jobs" not in data:
-            print("No jobs found for", company)
+            print("No jobs found")
             continue
 
         for job in data["jobs"]:
+
+            description_html = job.get("content")
+
+            description_text = None
+
+            if description_html:
+                description_text = BeautifulSoup(
+                    description_html,
+                    "html.parser"
+                ).get_text(separator=" ", strip=True)
 
             jobs.append({
                 "job_title": job.get("title"),
                 "company_name": company,
                 "company_location": job.get("location", {}).get("name"),
+                "job_description": description_text,
                 "job_url": job.get("absolute_url"),
                 "source": "greenhouse"
             })
 
+        print(f"{len(data['jobs'])} jobs collected from {company}")
+
     df = pd.DataFrame(jobs)
 
     print("\nTotal jobs scraped:", len(df))
-    print(df.head())
+
+    print("\nDescription length sample:")
+    print(df["job_description"].str.len().head())
 
     return df
 
@@ -82,4 +96,4 @@ if __name__ == "__main__":
         index=False
     )
 
-    print("Jobs saved to PostgreSQL")
+    print("\nJobs saved to PostgreSQL")
