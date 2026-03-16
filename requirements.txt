@@ -11,3 +11,6 @@ streamlit
 matplotlib
 seaborn
 python-dotenv
+playwright
+beautifulsoup4
+requests
